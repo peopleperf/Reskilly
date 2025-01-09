@@ -2,9 +2,63 @@
 
 import Image from "next/image"
 import Navigation from '@/components/Navigation'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Select from 'react-select'
+import { jobTitles, industries } from "@/data/jobData"
 import { JobAnalysisForm } from "@/components/forms/job-analysis-form"
 
 export default function AnalyzePage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<any>(null)
+  const [selectedIndustry, setSelectedIndustry] = useState<any>(null)
+  const [customJob, setCustomJob] = useState("")
+  const [customIndustry, setCustomIndustry] = useState("")
+  const [responsibilities, setResponsibilities] = useState("")
+  const [skills, setSkills] = useState("")
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    // Validate required fields
+    const jobTitle = selectedJob?.value === 'other' ? customJob : selectedJob?.label
+    const industry = selectedIndustry?.value === 'other' ? customIndustry : selectedIndustry?.label
+
+    if (!jobTitle || !industry) {
+      setError("Please fill in all required fields")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobTitle,
+          industry,
+          responsibilities: responsibilities.trim(),
+          skills: skills.trim(),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Analysis failed")
+
+      const data = await response.json()
+      localStorage.setItem("ANALYSIS_RESULTS", JSON.stringify(data))
+      router.push("/results")
+    } catch (err) {
+      setError("Failed to analyze job. Please try again.")
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Navigation />
@@ -39,7 +93,101 @@ export default function AnalyzePage() {
                 <p className="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">
                   Fill in your job details below to receive a personalized analysis of how AI might affect your role.
                 </p>
-                <JobAnalysisForm />
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Title *
+                    </label>
+                    <Select
+                      options={jobTitles}
+                      value={selectedJob}
+                      onChange={setSelectedJob}
+                      className="mb-2"
+                      placeholder="Select or type your job title..."
+                      isSearchable
+                    />
+                    {selectedJob?.value === 'other' && (
+                      <input
+                        type="text"
+                        value={customJob}
+                        onChange={(e) => setCustomJob(e.target.value)}
+                        placeholder="Enter your job title"
+                        className="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Industry *
+                    </label>
+                    <Select
+                      options={industries}
+                      value={selectedIndustry}
+                      onChange={setSelectedIndustry}
+                      className="mb-2"
+                      placeholder="Select or type your industry..."
+                      isSearchable
+                    />
+                    {selectedIndustry?.value === 'other' && (
+                      <input
+                        type="text"
+                        value={customIndustry}
+                        onChange={(e) => setCustomIndustry(e.target.value)}
+                        placeholder="Enter your industry"
+                        className="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Key Responsibilities (Optional)
+                    </label>
+                    <textarea
+                      value={responsibilities}
+                      onChange={(e) => setResponsibilities(e.target.value)}
+                      rows={4}
+                      placeholder="Enter your key job responsibilities..."
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Adding responsibilities will help provide more accurate analysis
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Skills (Optional)
+                    </label>
+                    <textarea
+                      value={skills}
+                      onChange={(e) => setSkills(e.target.value)}
+                      rows={4}
+                      placeholder="Enter your current skills..."
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Adding skills will help provide more accurate analysis
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="text-red-600 text-sm font-medium">{error}</div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+                      isLoading
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                  >
+                    {isLoading ? "Analyzing..." : "Analyze Impact"}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

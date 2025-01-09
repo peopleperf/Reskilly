@@ -21,6 +21,7 @@ export async function POST(request: Request) {
 
     const data = await request.json()
     
+    // Validate required fields
     if (!data.jobTitle) {
       console.error('Job title missing in request');
       return NextResponse.json(
@@ -30,6 +31,26 @@ export async function POST(request: Request) {
     }
 
     console.log('Making API request for job:', data.jobTitle);
+
+    let prompt = `Analyze the AI impact for a ${data.jobTitle} ${data.industry ? `in the ${data.industry} industry` : ''}.`
+
+    if (data.responsibilities?.trim()) {
+      prompt += `\n\nKey responsibilities: ${data.responsibilities}`
+    }
+
+    if (data.skills?.trim()) {
+      prompt += `\n\nCurrent skills: ${data.skills}`
+    }
+
+    prompt += `\n\nProvide a comprehensive analysis including:
+    1. Overview with impact score (0-100) and timeline
+    2. Current responsibilities and their automation risk
+    3. Emerging responsibilities
+    4. Current skills assessment
+    5. Recommended skills
+    6. Opportunities
+    7. Threats
+    8. Immediate, short-term, and long-term recommendations`
 
     const completion = await openai.chat.completions.create({
       model: "deepseek-chat",
@@ -151,7 +172,7 @@ export async function POST(request: Request) {
         },
         {
           role: "user",
-          content: `Analyze the role of "${data.jobTitle}" ${data.industry ? `in the ${data.industry} industry` : ''} and provide insights about its future in the age of AI.`
+          content: prompt
         }
       ],
       temperature: 0.7,
