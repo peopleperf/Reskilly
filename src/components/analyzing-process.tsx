@@ -82,11 +82,11 @@ export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
   }, [hasCompletedOnce, onComplete])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-3xl w-full mx-auto p-8">
-        <div className="text-center mb-12">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-3xl w-full mx-auto">
+        <div className="text-center mb-8 sm:mb-12">
           <MotionH1 
-            className="text-4xl font-bold text-gray-900 mb-4"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -94,7 +94,7 @@ export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
             Analyzing Your Role
           </MotionH1>
           <MotionP 
-            className="text-lg text-gray-600"
+            className="text-base sm:text-lg text-gray-600"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -103,7 +103,7 @@ export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
           </MotionP>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {steps.map((step, index) => {
             const Icon = step.icon
             const isActive = index === currentStep
@@ -112,17 +112,17 @@ export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
             return (
               <MotionDiv
                 key={step.title}
-                className={`relative flex items-center space-x-4 p-4 rounded-lg ${
+                className={`relative flex items-start sm:items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg ${
                   isActive ? 'bg-white shadow-lg' : 'bg-white/50'
                 }`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <div className={`flex-shrink-0 w-12 h-12 rounded-full ${step.color} flex items-center justify-center`}>
+                <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full ${step.color} flex items-center justify-center`}>
                   {isComplete ? (
                     <MotionDiv
-                      className="w-6 h-6 text-white"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-white"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       viewBox="0 0 20 20"
@@ -135,18 +135,18 @@ export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
                       />
                     </MotionDiv>
                   ) : (
-                    <Icon className="w-6 h-6 text-white" />
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   )}
                 </div>
 
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{step.title}</h3>
-                  <p className="text-sm text-gray-500">{step.description}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{step.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 line-clamp-2 sm:line-clamp-1">{step.description}</p>
                 </div>
 
                 {isActive && (
                   <MotionDiv
-                    className="absolute bottom-0 left-0 h-1 bg-blue-500"
+                    className="absolute bottom-0 left-0 h-0.5 sm:h-1 bg-blue-500"
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 2 }}

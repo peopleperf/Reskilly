@@ -412,10 +412,11 @@ export default function ResultsPage() {
   const [error, setError] = useState<Error | null>(null)
 
   // LinkedIn share handler
-  const handleShare = () => {
-    const shareText = `I just analyzed my job's AI impact using Reskilly! Check out how AI might affect your career: `
-    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&title=${encodeURIComponent(shareText)}`
-    window.open(shareUrl, '_blank')
+  const handleShareLinkedIn = () => {
+    const text = `I just analyzed my job's AI impact using Reskilly! Check out how AI might affect your career too.`
+    const url = 'https://reskilly.com'
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`
+    window.open(linkedInUrl, '_blank')
   }
 
   // PDF generation handler
@@ -660,7 +661,7 @@ export default function ResultsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center sm:text-left">Reskilly Analysis Report</h1>
               <div className="flex flex-wrap justify-center sm:justify-end gap-4">
                 <button
-                  onClick={handleShare}
+                  onClick={handleShareLinkedIn}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                 >
                   <Share2 className="w-5 h-5" />
