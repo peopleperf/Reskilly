@@ -22,8 +22,8 @@ export default function Navigation() {
             <Image
               src="/logo.png"
               alt="AI Job Impact Analyzer"
-              width={180}
-              height={60}
+              width={240}
+              height={80}
               className="w-auto h-full object-contain"
               priority
             />

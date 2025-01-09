@@ -1,20 +1,20 @@
-import { motion } from 'framer-motion'
+'use client'
+
+import { m } from 'framer-motion'
 import { Brain, BarChart2, Lightbulb, Target, Shield, ListChecks } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 interface AnalyzingProcessProps {
-  onComplete: () => void
+  jobData: {
+    jobTitle: string;
+    industry: string;
+    responsibilities?: string;
+    skills?: string;
+  };
+  onComplete?: () => void;
 }
-
-type MotionDivProps = {
-  className?: string
-  children?: React.ReactNode
-  [key: string]: any
-}
-
-const MotionDiv = motion.div as React.FC<MotionDivProps>
-const MotionH1 = motion.h1 as React.FC<MotionDivProps>
-const MotionP = motion.p as React.FC<MotionDivProps>
 
 const steps = [
   {
@@ -55,108 +55,125 @@ const steps = [
   }
 ]
 
-export function AnalyzingProcess({ onComplete }: AnalyzingProcessProps) {
+export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps) {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
-  const [hasCompletedOnce, setHasCompletedOnce] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentStep(prev => {
-        // If we've reached the end, start over unless onComplete has been called
-        if (prev === steps.length - 1) {
-          setHasCompletedOnce(true)
-          return 0 // Start over from the beginning
+    const analyzeJob = async () => {
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(jobData),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to analyze job')
         }
-        return prev + 1
-      })
-    }, 2000)
 
-    return () => clearInterval(timer)
-  }, [])
+        const result = await response.json()
 
-  // Call onComplete only when hasCompletedOnce is true
-  useEffect(() => {
-    if (hasCompletedOnce) {
-      onComplete()
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        // Simulate steps with delays
+        for (let i = 0; i < steps.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          setCurrentStep(i + 1)
+        }
+
+        // Store results
+        localStorage.setItem("JOB_DATA", JSON.stringify(jobData))
+        localStorage.setItem("ANALYSIS_RESULTS", JSON.stringify(result))
+        
+        // Navigate to results
+        router.push("/results")
+        onComplete?.()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to analyze job')
+        setTimeout(() => router.push("/analyze"), 3000) // Redirect back after error
+      }
     }
-  }, [hasCompletedOnce, onComplete])
+
+    analyzeJob()
+  }, [jobData, router, onComplete])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-3xl w-full mx-auto">
-        <div className="text-center mb-8 sm:mb-12">
-          <MotionH1 
-            className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Analyzing Your Role
-          </MotionH1>
-          <MotionP 
-            className="text-base sm:text-lg text-gray-600"
+      <div className="max-w-4xl w-full">
+        {error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <m.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-red-600"
+            >
+              {error}
+            </m.div>
+          </div>
+        ) : (
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
+            className="text-center"
           >
-            Our AI is performing a comprehensive analysis of your role
-          </MotionP>
-        </div>
+            <h1 className="text-3xl font-bold mb-8">
+              Analyzing {jobData.jobTitle} in {jobData.industry}
+            </h1>
+          </m.div>
+        )}
 
-        <div className="space-y-4 sm:space-y-6">
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center mb-12"
+        >
+          <p className="text-gray-600">
+            Please wait while we analyze the AI impact on your role...
+          </p>
+        </m.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {steps.map((step, index) => {
             const Icon = step.icon
             const isActive = index === currentStep
             const isComplete = index < currentStep
 
             return (
-              <MotionDiv
+              <m.div
                 key={step.title}
-                className={`relative flex items-start sm:items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg ${
-                  isActive ? 'bg-white shadow-lg' : 'bg-white/50'
-                }`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                className="relative bg-white rounded-lg p-6 shadow-sm"
               >
-                <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full ${step.color} flex items-center justify-center`}>
-                  {isComplete ? (
-                    <MotionDiv
-                      className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </MotionDiv>
-                  ) : (
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                  )}
+                <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center mb-4`}>
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{step.title}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 line-clamp-2 sm:line-clamp-1">{step.description}</p>
-                </div>
-
-                {isActive && (
-                  <MotionDiv
-                    className="absolute bottom-0 left-0 h-0.5 sm:h-1 bg-blue-500"
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 2 }}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-gray-600">{step.description}</p>
+                {(isActive || isComplete) && (
+                  <m.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 bg-green-500 bg-opacity-10 rounded-lg"
                   />
                 )}
-              </MotionDiv>
+              </m.div>
             )
           })}
         </div>
       </div>
     </div>
   )
-} 
+}

@@ -14,16 +14,16 @@ import { AnalyzingProcess } from "@/components/analyzing-process"
 const formSchema = z.object({
   jobTitle: z.string().min(2, "Job title must be at least 2 characters"),
   industry: z.string().min(2, "Industry must be at least 2 characters"),
-  responsibilities: z.string().min(10, "Please provide more details about your responsibilities"),
-  skills: z.string().min(10, "Please provide more details about your skills"),
+  responsibilities: z.string().optional(),
+  skills: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
 
 export function JobAnalysisForm() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isApiComplete, setIsApiComplete] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [formData, setFormData] = useState<FormData | null>(null)
   const router = useRouter()
 
   // Clear storage only when the form first mounts and we're not already analyzing
@@ -46,52 +46,26 @@ export function JobAnalysisForm() {
   const onSubmit = async (data: FormData) => {
     setIsAnalyzing(true)
     setAnalysisError(null)
-
-    try {
-      const formattedData = {
-        ...data,
-        responsibilities: data.responsibilities.split(",").map((r) => r.trim()),
-        skills: data.skills.split(",").map((s) => s.trim()),
-      }
-
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formattedData),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to analyze job")
-      }
-
-      if (result.error) {
-        throw new Error(result.error)
-      }
-
-      setStorageItem("JOB_DATA", formattedData)
-      setStorageItem("ANALYSIS_RESULTS", result)
-      setIsApiComplete(true)
-      router.push("/results")
-    } catch (error: any) {
-      console.error("Analysis Error:", error)
-      setAnalysisError(error.message || "Failed to analyze job. Please try again.")
-    } finally {
-      setIsAnalyzing(false)
-    }
+    setFormData(data)
   }
 
-  if (isAnalyzing) {
+  if (isAnalyzing && formData) {
+    const processData = {
+      jobTitle: formData.jobTitle,
+      industry: formData.industry,
+      responsibilities: formData.responsibilities?.trim(),
+      skills: formData.skills?.trim(),
+    }
+    
     return (
       <div className="fixed inset-0 z-50">
-        <AnalyzingProcess onComplete={() => {
-          if (isApiComplete) {
-            router.push("/results")
-          }
-        }} />
+        <AnalyzingProcess 
+          jobData={processData} 
+          onComplete={() => {
+            setIsAnalyzing(false)
+            setFormData(null)
+          }}
+        />
       </div>
     )
   }
@@ -102,22 +76,16 @@ export function JobAnalysisForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {analysisError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-600">{analysisError}</p>
-        </div>
-      )}
-      
       <div>
         <label htmlFor="jobTitle" className={labelClasses}>
-          Job Title
+          Job Title *
         </label>
-        <input
-          type="text"
+        <Input
           id="jobTitle"
+          type="text"
+          placeholder="e.g., Software Engineer"
+          className={inputClasses}
           {...register("jobTitle")}
-          placeholder="e.g. Software Engineer"
-          className={`${inputClasses} ${errors.jobTitle ? 'border-red-500' : ''}`}
         />
         {errors.jobTitle && (
           <p className={errorClasses}>{errors.jobTitle.message}</p>
@@ -126,14 +94,14 @@ export function JobAnalysisForm() {
 
       <div>
         <label htmlFor="industry" className={labelClasses}>
-          Industry
+          Industry *
         </label>
-        <input
-          type="text"
+        <Input
           id="industry"
+          type="text"
+          placeholder="e.g., Technology"
+          className={inputClasses}
           {...register("industry")}
-          placeholder="e.g. Technology"
-          className={`${inputClasses} ${errors.industry ? 'border-red-500' : ''}`}
         />
         {errors.industry && (
           <p className={errorClasses}>{errors.industry.message}</p>
@@ -142,16 +110,15 @@ export function JobAnalysisForm() {
 
       <div>
         <label htmlFor="responsibilities" className={labelClasses}>
-          Key Responsibilities
+          Key Responsibilities (Optional)
         </label>
         <textarea
           id="responsibilities"
-          {...register("responsibilities")}
-          placeholder="e.g. Developing web applications, Leading team projects"
+          placeholder="Enter your key responsibilities..."
+          className={inputClasses}
           rows={4}
-          className={`${inputClasses} resize-none ${errors.responsibilities ? 'border-red-500' : ''}`}
+          {...register("responsibilities")}
         />
-        <p className="text-sm text-gray-500 mt-1">Separate multiple responsibilities with commas</p>
         {errors.responsibilities && (
           <p className={errorClasses}>{errors.responsibilities.message}</p>
         )}
@@ -159,25 +126,28 @@ export function JobAnalysisForm() {
 
       <div>
         <label htmlFor="skills" className={labelClasses}>
-          Current Skills
+          Current Skills (Optional)
         </label>
         <textarea
           id="skills"
-          {...register("skills")}
-          placeholder="e.g. JavaScript, React, Project Management"
+          placeholder="Enter your current skills..."
+          className={inputClasses}
           rows={4}
-          className={`${inputClasses} resize-none ${errors.skills ? 'border-red-500' : ''}`}
+          {...register("skills")}
         />
-        <p className="text-sm text-gray-500 mt-1">Separate multiple skills with commas</p>
         {errors.skills && (
           <p className={errorClasses}>{errors.skills.message}</p>
         )}
       </div>
 
+      {analysisError && (
+        <div className="text-red-500 text-sm font-medium">{analysisError}</div>
+      )}
+
       <Button
         type="submit"
+        className="w-full bg-blue-900 hover:bg-blue-800 text-white"
         disabled={isAnalyzing}
-        className="w-full bg-black text-white hover:bg-black/90 py-3 rounded-lg font-medium transition-colors duration-200"
       >
         {isAnalyzing ? (
           <span className="flex items-center justify-center">
