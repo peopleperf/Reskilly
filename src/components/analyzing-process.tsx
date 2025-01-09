@@ -4,7 +4,6 @@ import { m } from 'framer-motion'
 import { Brain, BarChart2, Lightbulb, Target, Shield, ListChecks } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
 
 interface AnalyzingProcessProps {
   jobData: {
@@ -63,10 +62,10 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
   useEffect(() => {
     const analyzeJob = async () => {
       try {
-        const response = await fetch("/api/analyze", {
-          method: "POST",
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(jobData),
         })
@@ -88,8 +87,8 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
         }
 
         // Store results
-        localStorage.setItem("JOB_DATA", JSON.stringify(jobData))
-        localStorage.setItem("ANALYSIS_RESULTS", JSON.stringify(result))
+        localStorage.setItem('JOB_DATA', JSON.stringify(jobData))
+        localStorage.setItem('ANALYSIS_RESULTS', JSON.stringify(result))
         
         // Navigate to results
         router.push("/results")
@@ -104,84 +103,83 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
   }, [jobData, router, onComplete])
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}>
-      <div style={{ maxWidth: '40rem', width: '100%' }}>
+    <div className="fixed inset-0 bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
         {error ? (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fcd2d2', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1.5rem' }}>
-            <m.p 
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              style={{ color: '#dc2626' }}
             >
-              {error}
-            </m.p>
+              <p className="text-red-600">{error}</p>
+            </m.div>
           </div>
         ) : (
+          <div className="text-center">
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h1 className="text-3xl font-bold mb-8">
+                Analyzing {jobData.jobTitle} in {jobData.industry}
+              </h1>
+            </m.div>
+          </div>
+        )}
+
+        <div className="text-center mb-12">
           <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            style={{ textAlign: 'center' }}
           >
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '2rem' }}>
-              Analyzing {jobData.jobTitle} in {jobData.industry}
-            </h1>
+            <p className="text-gray-600">
+              Please wait while we analyze the AI impact on your role...
+            </p>
           </m.div>
-        )}
+        </div>
 
-        <m.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ textAlign: 'center', marginBottom: '3rem' }}
-        >
-          <p style={{ color: '#6b7280' }}>
-            Please wait while we analyze the AI impact on your role...
-          </p>
-        </m.div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, minmax(0, 1fr))', gap: '1.5rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {steps.map((step, index) => {
             const Icon = step.icon
             const isActive = index === currentStep
             const isComplete = index < currentStep
 
             return (
-              <m.div
-                key={step.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                style={{
-                  position: 'relative',
-                  backgroundColor: 'white',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                  border: isActive ? '2px solid #3b82f6' : 'none'
-                }}
-              >
-                <div style={{ width: '3rem', height: '3rem', borderRadius: '50%', backgroundColor: step.color, display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1rem' }}>
-                  <Icon style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
-                </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'semibold', color: '#1f2937', marginBottom: '0.5rem' }}>
-                  {step.title}
-                </h3>
-                <p style={{ color: '#6b7280' }}>{step.description}</p>
+              <div key={step.title} className="relative bg-white rounded-lg p-6 shadow-sm">
+                <m.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center mb-4`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-gray-600">{step.description}</p>
+                </m.div>
                 {(isActive || isComplete) && (
-                  <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      borderRadius: '0.5rem'
-                    }}
-                  />
+                  <div className="absolute inset-0 rounded-lg">
+                    <m.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        borderRadius: '0.5rem'
+                      }}
+                    />
+                  </div>
                 )}
-              </m.div>
+                {isActive && (
+                  <div className="absolute inset-0 ring-2 ring-blue-500 rounded-lg pointer-events-none" />
+                )}
+              </div>
             )
           })}
         </div>
