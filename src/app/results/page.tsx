@@ -512,7 +512,13 @@ export default function ResultsPage() {
           router.push("/analyze")
           return
         }
-        setResults(storedResults)
+        // Initialize opportunities and threats arrays if they don't exist
+        const resultsWithDefaults = {
+          ...storedResults,
+          opportunities: storedResults.opportunities || [],
+          threats: storedResults.threats || []
+        }
+        setResults(resultsWithDefaults)
       } catch (err) {
         // Clear storage only on error
         removeStorageItem("JOB_DATA")

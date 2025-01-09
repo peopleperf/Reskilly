@@ -167,6 +167,14 @@ export async function POST(request: Request) {
 
       const jsonResponse = JSON.parse(cleanedResponse)
 
+      // Initialize arrays if they don't exist
+      if (!jsonResponse.opportunities) {
+        jsonResponse.opportunities = []
+      }
+      if (!jsonResponse.threats) {
+        jsonResponse.threats = []
+      }
+
       // Validate the response structure
       if (!jsonResponse.overview?.impactScore || 
           !Array.isArray(jsonResponse.responsibilities?.current) ||
