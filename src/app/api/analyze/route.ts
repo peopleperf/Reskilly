@@ -123,46 +123,16 @@ export async function POST(request: Request) {
 
       const jsonResponse = JSON.parse(cleanedResponse)
 
-      // Transform the response to match frontend structure
-      const transformedResponse = {
-        overview: jsonResponse.overview,
-        responsibilities: {
-          current: jsonResponse.responsibilities.current.map((task: string) => ({
-            task,
-            automationRisk: Math.floor(Math.random() * 100),
-            reasoning: "Based on current AI capabilities and industry trends",
-            timeline: "1-3 years",
-            humanValue: "Requires human judgment and creativity"
-          })),
-          emerging: jsonResponse.responsibilities.future.map((task: string) => ({
-            task,
-            importance: "High",
-            timeline: "2-5 years"
-          }))
-        },
-        skills: {
-          current: jsonResponse.skills.technical.map((skill: string) => ({
-            skill,
-            currentRelevance: Math.floor(Math.random() * 40) + 60, // 60-100
-            futureRelevance: Math.floor(Math.random() * 30) + 70, // 70-100
-            automationRisk: Math.floor(Math.random() * 60), // 0-60
-            reasoning: "Based on industry trends and AI capabilities"
-          })),
-          recommended: jsonResponse.skills.emerging.map((skill: string) => ({
-            skill,
-            importance: "High",
-            timeline: "1-2 years",
-            resources: [
-              {
-                name: "Online Course",
-                type: "Course"
-              }
-            ]
-          }))
-        }
+      // Validate the response structure
+      if (!jsonResponse.overview?.impactScore || 
+          !Array.isArray(jsonResponse.responsibilities?.current) ||
+          !Array.isArray(jsonResponse.responsibilities?.emerging) ||
+          !Array.isArray(jsonResponse.skills?.current) ||
+          !Array.isArray(jsonResponse.skills?.recommended)) {
+        throw new Error('Invalid response structure')
       }
 
-      return NextResponse.json(transformedResponse)
+      return NextResponse.json(jsonResponse)
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError, '\nCleaned Response:', cleanedResponse);
       return NextResponse.json(
