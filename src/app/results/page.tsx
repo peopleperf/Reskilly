@@ -681,22 +681,30 @@ export default function ResultsPage() {
             <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="order-2 md:order-1">
-                  <p className="text-gray-600 leading-relaxed">{results.overview.summary}</p>
-                  <p className="text-gray-600 mt-4">
-                    <span className="font-semibold">Timeline: </span>
-                    {results.overview.timeframe}
-                  </p>
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">Impact Summary</h3>
+                      <p className="text-gray-600 leading-relaxed">{results.overview.summary}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">Timeline</h3>
+                      <p className="text-gray-600">{results.overview.timeframe}</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="order-1 md:order-2">
-                  <div className="flex items-center justify-center">
-                    <div className="relative w-24 sm:w-32 h-24 sm:h-32">
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="relative w-32 sm:w-40 h-32 sm:h-40">
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span 
-                          className="text-4xl font-bold"
-                          style={{ color: getImpactScoreTextColor(results.overview.impactScore) }}
-                        >
-                          {results.overview.impactScore}%
-                        </span>
+                        <div className="text-center">
+                          <span 
+                            className="text-4xl sm:text-5xl font-bold block"
+                            style={{ color: getImpactScoreTextColor(results.overview.impactScore) }}
+                          >
+                            {results.overview.impactScore}%
+                          </span>
+                          <span className="text-sm text-gray-500 mt-1 block">Impact Score</span>
+                        </div>
                       </div>
                       <svg className="w-full h-full" viewBox="0 0 36 36">
                         <path
@@ -725,12 +733,12 @@ export default function ResultsPage() {
 
             {/* Tabbed Sections */}
             <Tab.Group>
-              <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1">
+              <Tab.List className="flex flex-wrap sm:flex-nowrap gap-2 rounded-xl bg-gray-100 p-2">
                 {sections.slice(1).map((section) => (
                   <Tab
                     key={section.id}
                     className={({ selected }) =>
-                      `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors
+                      `flex-1 min-w-[120px] rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors
                       ${
                         selected
                           ? 'bg-white shadow text-blue-700'
@@ -743,45 +751,54 @@ export default function ResultsPage() {
                 ))}
               </Tab.List>
 
-              <Tab.Panels className="mt-2">
+              <Tab.Panels className="mt-4">
                 {/* Responsibilities Panel */}
                 <Tab.Panel>
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Responsibilities Analysis</h2>
+                  <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Responsibilities Analysis</h2>
                     <div className="space-y-6">
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Current Responsibilities</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Current Responsibilities</h3>
                         <div className="space-y-4">
                           {results.responsibilities.current.map((resp, index) => (
-                            <div key={index} className="border rounded-lg p-4">
+                            <div key={index} className="border rounded-lg p-3 sm:p-4">
                               <h4 className="font-semibold text-gray-900">{resp.task}</h4>
                               <div className="mt-2 space-y-2">
-                                <div className="flex items-center">
-                                  <span className="text-sm text-gray-500 w-32">Automation Risk:</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                  <span className="text-sm text-gray-500 sm:w-32">Automation Risk:</span>
                                   <div className="flex-1 h-2 bg-gray-200 rounded-full">
                                     <div
                                       className="h-full bg-red-500 rounded-full"
                                       style={{ width: `${resp.automationRisk}%` }}
                                     />
                                   </div>
-                                  <span className="ml-2 text-sm text-gray-500">{resp.automationRisk}%</span>
+                                  <span className="text-sm text-gray-500">{resp.automationRisk}%</span>
                                 </div>
-                                <p className="text-gray-600"><span className="font-medium">Timeline:</span> {resp.timeline}</p>
-                                <p className="text-gray-600"><span className="font-medium">Reasoning:</span> {resp.reasoning}</p>
-                                <p className="text-gray-600"><span className="font-medium">Human Value:</span> {resp.humanValue}</p>
+                                <div className="space-y-2">
+                                  <p className="text-gray-600 text-sm sm:text-base">
+                                    <span className="font-medium">Timeline:</span> {resp.timeline}
+                                  </p>
+                                  <p className="text-gray-600 text-sm sm:text-base">
+                                    <span className="font-medium">Reasoning:</span> {resp.reasoning}
+                                  </p>
+                                  <p className="text-gray-600 text-sm sm:text-base">
+                                    <span className="font-medium">Human Value:</span> {resp.humanValue}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
+
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Emerging Responsibilities</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Emerging Responsibilities</h3>
                         <div className="space-y-4">
                           {results.responsibilities.emerging.map((resp, index) => (
-                            <div key={index} className="border rounded-lg p-4">
+                            <div key={index} className="border rounded-lg p-3 sm:p-4">
                               <h4 className="font-semibold text-gray-900">{resp.task}</h4>
-                              <p className="text-gray-600 mt-2">{resp.importance}</p>
-                              <p className="text-gray-500 mt-1">Timeline: {resp.timeline}</p>
+                              <p className="text-gray-600 mt-2 text-sm sm:text-base">{resp.importance}</p>
+                              <p className="text-gray-500 mt-1 text-sm sm:text-base">Timeline: {resp.timeline}</p>
                             </div>
                           ))}
                         </div>
@@ -792,9 +809,8 @@ export default function ResultsPage() {
 
                 {/* Skills Assessment Panel */}
                 <Tab.Panel>
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Skills Assessment</h2>
-                    
+                  <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Skills Assessment</h2>
                     {/* Radar Chart with Explanation */}
                     <div className="mb-8">
                       <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -817,31 +833,31 @@ export default function ResultsPage() {
                     {/* Skills Details */}
                     <div className="space-y-6">
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Current Skills</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Current Skills</h3>
                         <div className="space-y-4">
                           {results.skills.current.map((skill, index) => (
-                            <div key={index} className="border rounded-lg p-4">
+                            <div key={index} className="border rounded-lg p-3 sm:p-4">
                               <h4 className="font-semibold text-gray-900">{skill.skill}</h4>
                               <div className="mt-2 space-y-2">
-                                <div className="flex items-center">
-                                  <span className="text-sm text-gray-500 w-32">Current Relevance:</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                  <span className="text-sm text-gray-500 sm:w-32">Current Relevance:</span>
                                   <div className="flex-1 h-2 bg-gray-200 rounded-full">
                                     <div
                                       className="h-full bg-blue-500 rounded-full"
                                       style={{ width: `${skill.currentRelevance}%` }}
                                     />
                                   </div>
-                                  <span className="ml-2 text-sm text-gray-500">{skill.currentRelevance}%</span>
+                                  <span className="text-sm text-gray-500">{skill.currentRelevance}%</span>
                                 </div>
-                                <div className="flex items-center">
-                                  <span className="text-sm text-gray-500 w-32">Future Relevance:</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                  <span className="text-sm text-gray-500 sm:w-32">Future Relevance:</span>
                                   <div className="flex-1 h-2 bg-gray-200 rounded-full">
                                     <div
                                       className="h-full bg-green-500 rounded-full"
                                       style={{ width: `${skill.futureRelevance}%` }}
                                     />
                                   </div>
-                                  <span className="ml-2 text-sm text-gray-500">{skill.futureRelevance}%</span>
+                                  <span className="text-sm text-gray-500">{skill.futureRelevance}%</span>
                                 </div>
                                 <p className="text-gray-600 mt-2">{skill.reasoning}</p>
                               </div>
@@ -850,13 +866,13 @@ export default function ResultsPage() {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Recommended Skills</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Recommended Skills</h3>
                         <div className="space-y-4">
                           {results.skills.recommended.map((skill, index) => (
-                            <div key={index} className="border rounded-lg p-4">
+                            <div key={index} className="border rounded-lg p-3 sm:p-4">
                               <h4 className="font-semibold text-gray-900">{skill.skill}</h4>
-                              <p className="text-gray-600 mt-2">{skill.importance}</p>
-                              <p className="text-gray-500">Timeline: {skill.timeline}</p>
+                              <p className="text-gray-600 mt-2 text-sm sm:text-base">{skill.importance}</p>
+                              <p className="text-gray-500 mt-1 text-sm sm:text-base">Timeline: {skill.timeline}</p>
                               <div className="mt-3">
                                 <h5 className="font-medium text-gray-900">Learning Resources:</h5>
                                 <div className="mt-2 space-y-2">
@@ -893,11 +909,11 @@ export default function ResultsPage() {
 
                 {/* Opportunities Panel */}
                 <Tab.Panel>
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Opportunities</h2>
+                  <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Opportunities</h2>
                     <div className="space-y-4">
                       {results.opportunities.map((opp, index) => (
-                        <div key={index} className="border rounded-lg p-4">
+                        <div key={index} className="border rounded-lg p-3 sm:p-4">
                           <h4 className="font-semibold text-gray-900">{opp.title}</h4>
                           <p className="text-gray-600 mt-2">{opp.description}</p>
                           <div className="mt-3">
@@ -920,11 +936,11 @@ export default function ResultsPage() {
 
                 {/* Threats Panel */}
                 <Tab.Panel>
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Threats</h2>
+                  <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Threats</h2>
                     <div className="space-y-4">
                       {results.threats.map((threat, index) => (
-                        <div key={index} className="border rounded-lg p-4">
+                        <div key={index} className="border rounded-lg p-3 sm:p-4">
                           <div className="flex justify-between items-start">
                             <h4 className="font-semibold text-gray-900">{threat.title}</h4>
                             <span className={`px-2 py-1 rounded text-sm ${
@@ -953,8 +969,8 @@ export default function ResultsPage() {
 
                 {/* Action Plan Panel */}
                 <Tab.Panel>
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Action Plan</h2>
+                  <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Action Plan</h2>
                     <Timeline 
                       items={[
                         ...results.recommendations.immediate.map(rec => ({
