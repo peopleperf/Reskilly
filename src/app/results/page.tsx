@@ -661,14 +661,22 @@ export default function ResultsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center sm:text-left">Reskilly Analysis Report</h1>
               <div className="flex flex-wrap justify-center sm:justify-end gap-4">
                 <button
-                  onClick={handleShareLinkedIn}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleShareLinkedIn()
+                  }}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                 >
                   <Share2 className="w-5 h-5" />
                   <span>Share on LinkedIn</span>
                 </button>
                 <button
-                  onClick={handleExportPDF}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleExportPDF()
+                  }}
                   disabled={isGeneratingPDF}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                 >
