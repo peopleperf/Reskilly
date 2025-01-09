@@ -107,23 +107,20 @@ export async function POST(request: Request) {
 
       console.log('Raw API response:', responseText);
 
-      try {
-        // Clean the response text
-        let cleanedResponse = responseText
-          .replace(/```json\s*/g, '') // Remove ```json and any whitespace after it
-          .replace(/```\s*/g, '')     // Remove ``` and any whitespace after it
-          .replace(/^\s*{\s*/, '{')   // Clean up starting whitespace
-          .replace(/\s*}\s*$/, '}')   // Clean up ending whitespace
-          .trim()
+      const cleanedResponse = responseText
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '')
+        .replace(/^\s*{\s*/, '{')
+        .replace(/\s*}\s*$/, '}')
+        .trim();
 
-        // Verify it starts with { and ends with }
+      try {
         if (!cleanedResponse.startsWith('{') || !cleanedResponse.endsWith('}')) {
           throw new Error('Invalid JSON structure')
         }
 
         const jsonResponse = JSON.parse(cleanedResponse)
 
-        // Validate the response structure
         if (!jsonResponse.overview || !jsonResponse.responsibilities || !jsonResponse.skills) {
           throw new Error('Invalid response structure')
         }
