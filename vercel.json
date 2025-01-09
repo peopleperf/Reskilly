@@ -1,6 +1,6 @@
 {
   "functions": {
-    "src/app/api/analyze/route.ts": {
+    "**/*.ts": {
       "maxDuration": 60
     }
   }
