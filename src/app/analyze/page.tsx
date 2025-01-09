@@ -14,7 +14,7 @@ export default function AnalyzePage() {
             {/* Image Section */}
             <div className="relative h-full min-h-[400px] md:min-h-[600px] order-2 md:order-1">
               <Image
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c"
+                src="/images/analyze-background.jpg"
                 alt="Professional team analyzing data"
                 fill
                 className="object-cover"
@@ -47,4 +47,4 @@ export default function AnalyzePage() {
       </div>
     </div>
   )
-} 
+}

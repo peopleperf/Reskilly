@@ -13,7 +13,7 @@ export default function Home() {
       <section className="absolute inset-0 flex items-center justify-center">
         {/* Background Image */}
         <Image
-          src="https://images.unsplash.com/photo-1451187580459-43490279c0fa"
+          src="/images/ai-background.jpg"
           alt="AI Technology Background"
           fill
           className="object-cover"

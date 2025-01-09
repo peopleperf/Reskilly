@@ -44,62 +44,50 @@ export function JobAnalysisForm() {
   })
 
   const onSubmit = async (data: FormData) => {
-    try {
-      setIsApiComplete(false)
-      setAnalysisError(null)
+    setIsAnalyzing(true)
+    setAnalysisError(null)
 
-      // Format the data first
+    try {
       const formattedData = {
         ...data,
         responsibilities: data.responsibilities.split(",").map((r) => r.trim()),
         skills: data.skills.split(",").map((s) => s.trim()),
       }
 
-      // Start showing analyzing process immediately
-      setIsAnalyzing(true)
-
-      // Make API call concurrently
-      const apiCall = async () => {
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formattedData),
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to analyze job")
-        }
-
-        const result = await response.json()
-
-        // Store data immediately after successful analysis
-        setStorageItem("JOB_DATA", formattedData)
-        setStorageItem("ANALYSIS_RESULTS", result)
-        setIsApiComplete(true)
-      }
-
-      // Start the API call but don't await it
-      apiCall().catch((error) => {
-        setIsAnalyzing(false)
-        setIsApiComplete(false)
-        setAnalysisError(error.message || "Failed to analyze job")
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formattedData),
       })
 
-    } catch (error) {
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to analyze job")
+      }
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      setStorageItem("JOB_DATA", formattedData)
+      setStorageItem("ANALYSIS_RESULTS", result)
+      setIsApiComplete(true)
+      router.push("/results")
+    } catch (error: any) {
+      console.error("Analysis Error:", error)
+      setAnalysisError(error.message || "Failed to analyze job. Please try again.")
+    } finally {
       setIsAnalyzing(false)
-      setIsApiComplete(false)
-      setAnalysisError(error instanceof Error ? error.message : "Failed to analyze job")
     }
   }
 
-  // Show the analyzing process if we're in analyzing state
   if (isAnalyzing) {
     return (
       <div className="fixed inset-0 z-50">
         <AnalyzingProcess onComplete={() => {
-          // Only navigate if the API call is complete
           if (isApiComplete) {
             router.push("/results")
           }
