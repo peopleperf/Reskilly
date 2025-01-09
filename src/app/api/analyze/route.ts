@@ -158,58 +158,58 @@ export async function POST(request: Request) {
       max_tokens: 2000
     })
 
-    const responseText = completion.choices[0]?.message?.content
-    
-    if (!responseText) {
-      console.error('Empty response from API');
-      throw new Error('Empty response from API')
-    }
-
-    console.log('Raw API response:', responseText);
-
-    const cleanedResponse = responseText
-      .replace(/```json\s*/g, '')
-      .replace(/```\s*/g, '')
-      .replace(/^\s*{\s*/, '{')
-      .replace(/\s*}\s*$/, '}')
-      .trim();
-
     try {
-      if (!cleanedResponse.startsWith('{') || !cleanedResponse.endsWith('}')) {
-        throw new Error('Invalid JSON structure')
+      // Parse and validate the response
+      const rawResponse = completion.choices[0]?.message?.content;
+      if (!rawResponse) {
+        throw new Error('Empty response from API');
       }
-
-      const jsonResponse = JSON.parse(cleanedResponse)
+      
+      console.log('Raw API response:', rawResponse);
+      
+      let cleanedResponse = rawResponse;
+      // If the response is truncated, try to fix the JSON
+      if (!isValidJSON(cleanedResponse)) {
+        console.log('Invalid JSON detected, attempting to clean...');
+        cleanedResponse = cleanJSON(cleanedResponse);
+      }
+      
+      console.log('Cleaned Response:', cleanedResponse);
+      const parsedResponse = JSON.parse(cleanedResponse);
+      
+      // Add job title to the response
+      parsedResponse.jobTitle = data.jobTitle;
 
       // Initialize arrays if they don't exist
-      if (!jsonResponse.opportunities) {
-        jsonResponse.opportunities = []
+      if (!parsedResponse.opportunities) {
+        parsedResponse.opportunities = []
       }
-      if (!jsonResponse.threats) {
-        jsonResponse.threats = []
+      if (!parsedResponse.threats) {
+        parsedResponse.threats = []
       }
 
       // Validate the response structure
-      if (!jsonResponse.overview?.impactScore || 
-          !Array.isArray(jsonResponse.responsibilities?.current) ||
-          !Array.isArray(jsonResponse.responsibilities?.emerging) ||
-          !Array.isArray(jsonResponse.skills?.current) ||
-          !Array.isArray(jsonResponse.skills?.recommended) ||
-          !Array.isArray(jsonResponse.opportunities) ||
-          !Array.isArray(jsonResponse.threats) ||
-          !jsonResponse.recommendations?.immediate ||
-          !jsonResponse.recommendations?.shortTerm ||
-          !jsonResponse.recommendations?.longTerm) {
+      if (!parsedResponse.jobTitle ||
+          !parsedResponse.overview?.impactScore || 
+          !Array.isArray(parsedResponse.responsibilities?.current) ||
+          !Array.isArray(parsedResponse.responsibilities?.emerging) ||
+          !Array.isArray(parsedResponse.skills?.current) ||
+          !Array.isArray(parsedResponse.skills?.recommended) ||
+          !Array.isArray(parsedResponse.opportunities) ||
+          !Array.isArray(parsedResponse.threats) ||
+          !parsedResponse.recommendations?.immediate ||
+          !parsedResponse.recommendations?.shortTerm ||
+          !parsedResponse.recommendations?.longTerm) {
         throw new Error('Invalid response structure')
       }
 
-      return NextResponse.json(jsonResponse)
-    } catch (parseError) {
-      console.error('JSON Parse Error:', parseError, '\nCleaned Response:', cleanedResponse);
+      return NextResponse.json(parsedResponse);
+    } catch (error) {
+      console.error('Error processing API response:', error);
       return NextResponse.json(
-        { error: 'Failed to parse AI response. Please try again.' },
+        { error: 'Failed to process AI response. Please try again.' },
         { status: 500 }
-      )
+      );
     }
 
   } catch (error: any) {
@@ -222,4 +222,23 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+}
+
+// Helper functions
+function isValidJSON(str: string) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function cleanJSON(str: string) {
+  // Remove any trailing incomplete objects
+  const lastBrace = str.lastIndexOf('}');
+  if (lastBrace !== -1) {
+    return str.substring(0, lastBrace + 1);
+  }
+  return str;
 }

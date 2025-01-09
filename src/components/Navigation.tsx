@@ -18,13 +18,13 @@ export default function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center h-full py-2">
             <Image
               src="/logo.png"
               alt="AI Job Impact Analyzer"
-              width={252}
-              height={84}
-              className="w-auto"
+              width={126}
+              height={42}
+              className="w-auto h-full object-contain"
               priority
             />
           </Link>

@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useClearStorageOnNavigation } from '@/hooks/useClearStorageOnNavigation'
 
 interface AnalysisResult {
+  jobTitle: string
   overview: {
     impactScore: number
     summary: string
@@ -186,8 +187,8 @@ const PDFContent = ({ results }: { results: AnalysisResult | null }) => {
                           </div>
                           <span className="ml-2 text-sm text-gray-500">{resp.automationRisk}%</span>
                         </div>
+                        <p className="text-gray-600 mt-2">{resp.reasoning}</p>
                         <p className="text-gray-600"><span className="font-medium">Timeline:</span> {resp.timeline}</p>
-                        <p className="text-gray-600"><span className="font-medium">Reasoning:</span> {resp.reasoning}</p>
                         <p className="text-gray-600"><span className="font-medium">Human Value:</span> {resp.humanValue}</p>
                       </div>
                     </div>
@@ -412,87 +413,82 @@ export default function ResultsPage() {
   const [error, setError] = useState<Error | null>(null)
 
   // LinkedIn share handler
-  const handleShareLinkedIn = () => {
-    const text = `I just analyzed my job's AI impact using Reskilly! Check out how AI might affect your career too.`
-    const url = 'https://reskilly.com'
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`
-    window.open(linkedInUrl, '_blank')
-  }
+  const handleShareLinkedIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!results) return;
+    
+    const shareText = `I analyzed how AI will impact my role as a ${results.jobTitle}. Impact Score: ${results.overview.impactScore}/100. Key finding: ${results.overview.summary.split('.')[0]}.`;
+    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://reskilly.com')}&summary=${encodeURIComponent(shareText)}`;
+    window.open(shareUrl, '_blank');
+  };
 
   // PDF generation handler
-  const handleExportPDF = async () => {
-    if (!results) {
-      console.error('No results available for PDF generation')
-      return
-    }
-
-    setIsGeneratingPDF(true)
+  const handleExportPDF = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isGeneratingPDF || !results) return;
+    setIsGeneratingPDF(true);
+    
     try {
-      // Create a temporary div for PDF content
-      const tempDiv = document.createElement('div')
-      document.body.appendChild(tempDiv)
-
-      // Render PDF content
-      const root = createRoot(tempDiv)
-      await new Promise<void>(resolve => {
-        root.render(<PDFContent results={results} />)
-        setTimeout(resolve, 1000)
-      })
-
-      // Get styles
-      const styles = Array.from(document.styleSheets)
-        .map(sheet => {
-          try {
-            return Array.from(sheet.cssRules)
-              .map(rule => rule.cssText)
-              .join('\n')
-          } catch {
-            return ''
-          }
-        })
-        .join('\n')
-
-      // Create HTML content
-      const html = `
-        <html>
-          <head>
-            <style>${styles}</style>
-          </head>
-          <body>
-            ${tempDiv.innerHTML}
-          </body>
-        </html>
-      `
-
-      // Clean up
-      root.unmount()
-      document.body.removeChild(tempDiv)
-
-      // Generate PDF
+      const element = document.getElementById('pdf-content');
+      if (!element) throw new Error('PDF content element not found');
+      
+      // Clean up the HTML content
+      const cleanHtml = element.outerHTML
+        .replace(/data-headlessui-state="[^"]*"/g, '')
+        .replace(/style="[^"]*"/g, '')
+        .replace(/class="[^"]*"/g, (match) => {
+          // Keep only essential classes for PDF styling
+          const classes = match.slice(7, -1).split(' ');
+          const keepClasses = classes.filter(cls => 
+            cls.includes('score-circle') || 
+            cls.includes('section') || 
+            cls.includes('header')
+          );
+          return keepClasses.length ? `class="${keepClasses.join(' ')}"` : '';
+        });
+      
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html })
-      })
-
-      if (!response.ok) throw new Error('Failed to generate PDF')
-
-      // Download PDF
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'ai-impact-analysis.pdf'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: cleanHtml,
+          jobTitle: results.jobTitle
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate PDF');
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${results.jobTitle.replace(/[^a-zA-Z0-9]/g, '_')}_AI_Impact_Analysis.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error('Error generating PDF:', error)
+      console.error('Error generating PDF:', error);
+      // Show error to user
+      alert(error instanceof Error ? error.message : 'Failed to generate PDF. Please try again.');
     } finally {
-      setIsGeneratingPDF(false)
+      setIsGeneratingPDF(false);
     }
-  }
+  };
 
   // Filter recommendations
   const getFilteredRecommendations = () => {
@@ -520,11 +516,32 @@ export default function ResultsPage() {
           router.push("/analyze")
           return
         }
-        // Initialize opportunities and threats arrays if they don't exist
+
+        // Validate required fields
+        if (!storedResults.jobTitle ||
+            !storedResults.overview?.impactScore ||
+            !storedResults.overview?.summary ||
+            !storedResults.overview?.timeframe ||
+            !Array.isArray(storedResults.responsibilities?.current) ||
+            !Array.isArray(storedResults.responsibilities?.emerging) ||
+            !Array.isArray(storedResults.skills?.current) ||
+            !Array.isArray(storedResults.skills?.recommended)) {
+          console.error('Invalid results structure:', storedResults);
+          setError(new Error('Invalid analysis results. Please try again.'));
+          router.push("/analyze");
+          return;
+        }
+
+        // Initialize arrays if they don't exist
         const resultsWithDefaults = {
           ...storedResults,
           opportunities: storedResults.opportunities || [],
-          threats: storedResults.threats || []
+          threats: storedResults.threats || [],
+          recommendations: {
+            immediate: storedResults.recommendations?.immediate || [],
+            shortTerm: storedResults.recommendations?.shortTerm || [],
+            longTerm: storedResults.recommendations?.longTerm || []
+          }
         }
         setResults(resultsWithDefaults)
       } catch (err) {
@@ -662,10 +679,7 @@ export default function ResultsPage() {
               <div className="flex flex-wrap justify-center sm:justify-end gap-4">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleShareLinkedIn()
-                  }}
+                  onClick={handleShareLinkedIn}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                 >
                   <Share2 className="w-5 h-5" />
@@ -673,10 +687,7 @@ export default function ResultsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleExportPDF()
-                  }}
+                  onClick={handleExportPDF}
                   disabled={isGeneratingPDF}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
                 >
