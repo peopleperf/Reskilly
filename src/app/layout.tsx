@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { Analytics } from "@vercel/analytics/react"
 import './globals.css'
 import Navigation from '@/components/Navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Reskilly - AI Job Impact Analyzer',
-  description: 'Analyze how AI will impact your job and get personalized recommendations',
+  title: 'AI Job Impact Analyzer',
+  description: 'Analyze how AI will impact your job role and prepare for the future',
 }
 
 export const viewport: Viewport = {
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Navigation />
         {children}
+        <Analytics />
       </body>
     </html>
   )
