@@ -88,6 +88,50 @@ export async function POST(request: Request) {
                   ]
                 }
               ]
+            },
+            "opportunities": [
+              {
+                "title": "<opportunity title>",
+                "description": "<detailed description>",
+                "actionItems": ["<action item 1>", "<action item 2>"],
+                "timeline": "<when to act on this opportunity>",
+                "potentialOutcome": "<expected outcome if pursued>"
+              }
+            ],
+            "threats": [
+              {
+                "title": "<threat title>",
+                "description": "<detailed description>",
+                "riskLevel": "<high/medium/low>",
+                "mitigationSteps": ["<step 1>", "<step 2>"],
+                "timeline": "<when this threat might materialize>"
+              }
+            ],
+            "recommendations": {
+              "immediate": [
+                {
+                  "action": "<action to take>",
+                  "reasoning": "<why this action is important>",
+                  "resources": ["<resource 1>", "<resource 2>"],
+                  "expectedOutcome": "<what to expect after taking action>"
+                }
+              ],
+              "shortTerm": [
+                {
+                  "action": "<action to take>",
+                  "reasoning": "<why this action is important>",
+                  "resources": ["<resource 1>", "<resource 2>"],
+                  "expectedOutcome": "<what to expect after taking action>"
+                }
+              ],
+              "longTerm": [
+                {
+                  "action": "<action to take>",
+                  "reasoning": "<why this action is important>",
+                  "resources": ["<resource 1>", "<resource 2>"],
+                  "expectedOutcome": "<what to expect after taking action>"
+                }
+              ]
             }
           }`
         },
@@ -128,7 +172,12 @@ export async function POST(request: Request) {
           !Array.isArray(jsonResponse.responsibilities?.current) ||
           !Array.isArray(jsonResponse.responsibilities?.emerging) ||
           !Array.isArray(jsonResponse.skills?.current) ||
-          !Array.isArray(jsonResponse.skills?.recommended)) {
+          !Array.isArray(jsonResponse.skills?.recommended) ||
+          !Array.isArray(jsonResponse.opportunities) ||
+          !Array.isArray(jsonResponse.threats) ||
+          !jsonResponse.recommendations?.immediate ||
+          !jsonResponse.recommendations?.shortTerm ||
+          !jsonResponse.recommendations?.longTerm) {
         throw new Error('Invalid response structure')
       }
 
