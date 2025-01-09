@@ -116,7 +116,7 @@ const PDFContent = ({ results }: { results: AnalysisResult | null }) => {
           <h1 className="text-3xl font-bold text-gray-900 text-center">Reskilly Analysis Report</h1>
 
           {/* Overview Section */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6 mt-12">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Overview</h2>
@@ -243,7 +243,7 @@ const PDFContent = ({ results }: { results: AnalysisResult | null }) => {
                         <p className="text-gray-600 mt-2">{skill.reasoning}</p>
                       </div>
                     </div>
-                  ))}
+                  ))}<div className="min-h-screen bg-gray-50 mt-8"></div>
                 </div>
               </div>
               <div>
@@ -260,7 +260,14 @@ const PDFContent = ({ results }: { results: AnalysisResult | null }) => {
                           {skill.resources.map((resource, idx) => (
                             <div key={idx} className="bg-gray-50 p-3 rounded">
                               <div className="flex justify-between">
-                                <span className="text-blue-600">{resource.name}</span>
+                                <a 
+                                  href={resource.link} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {resource.name}
+                                </a>
                                 <span className="text-gray-500">{resource.type}</span>
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
@@ -646,85 +653,75 @@ export default function ResultsPage() {
         </div>
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 pt-24">
           <div className="max-w-4xl mx-auto space-y-8">
-            {/* Overview Section - Always visible */}
-            <section id="overview">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '0.5rem',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-                  padding: '1.5rem'
-                }}
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={handleShare}
-                      className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-                    >
-                      <Share2 className="w-5 h-5" />
-                      <span>Share on LinkedIn</span>
-                    </button>
-                    <button
-                      onClick={handleExportPDF}
-                      disabled={isGeneratingPDF}
-                      className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-                    >
-                      <Download className="w-5 h-5" />
-                      <span>{isGeneratingPDF ? 'Generating...' : 'Export PDF'}</span>
-                    </button>
-                  </div>
-                </div>
+            {/* Header with Share/Export buttons */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center sm:text-left">Reskilly Analysis Report</h1>
+              <div className="flex flex-wrap justify-center sm:justify-end gap-4">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+                >
+                  <Share2 className="w-5 h-5" />
+                  <span>Share on LinkedIn</span>
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  disabled={isGeneratingPDF}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>{isGeneratingPDF ? 'Generating...' : 'Export PDF'}</span>
+                </button>
+              </div>
+            </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-gray-600 leading-relaxed">{results.overview.summary}</p>
-                    <p className="text-gray-600 mt-4">
-                      <span className="font-semibold">Timeline: </span>
-                      {results.overview.timeframe}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center">
-                      <div className="relative w-32 h-32">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span 
-                            className="text-4xl font-bold"
-                            style={{ color: getImpactScoreTextColor(results.overview.impactScore) }}
-                          >
-                            {results.overview.impactScore}%
-                          </span>
-                        </div>
-                        <svg className="w-full h-full" viewBox="0 0 36 36">
-                          <path
-                            d="M18 2.0845
-                              a 15.9155 15.9155 0 0 1 0 31.831
-                              a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="#E5E7EB"
-                            strokeWidth="3"
-                          />
-                          <path
-                            d="M18 2.0845
-                              a 15.9155 15.9155 0 0 1 0 31.831
-                              a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke={getImpactScoreColor(results.overview.impactScore)}
-                            strokeWidth="3"
-                            strokeDasharray={`${results.overview.impactScore}, 100`}
-                          />
-                        </svg>
+            {/* Overview Section */}
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="order-2 md:order-1">
+                  <p className="text-gray-600 leading-relaxed">{results.overview.summary}</p>
+                  <p className="text-gray-600 mt-4">
+                    <span className="font-semibold">Timeline: </span>
+                    {results.overview.timeframe}
+                  </p>
+                </div>
+                <div className="order-1 md:order-2">
+                  <div className="flex items-center justify-center">
+                    <div className="relative w-24 sm:w-32 h-24 sm:h-32">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span 
+                          className="text-4xl font-bold"
+                          style={{ color: getImpactScoreTextColor(results.overview.impactScore) }}
+                        >
+                          {results.overview.impactScore}%
+                        </span>
                       </div>
+                      <svg className="w-full h-full" viewBox="0 0 36 36">
+                        <path
+                          d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="#E5E7EB"
+                          strokeWidth="3"
+                        />
+                        <path
+                          d="M18 2.0845
+                            a 15.9155 15.9155 0 0 1 0 31.831
+                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke={getImpactScoreColor(results.overview.impactScore)}
+                          strokeWidth="3"
+                          strokeDasharray={`${results.overview.impactScore}, 100`}
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </section>
+              </div>
+            </div>
 
             {/* Tabbed Sections */}
             <Tab.Group>
@@ -866,7 +863,14 @@ export default function ResultsPage() {
                                   {skill.resources.map((resource, idx) => (
                                     <div key={idx} className="bg-gray-50 p-3 rounded">
                                       <div className="flex justify-between">
-                                        <span className="text-blue-600">{resource.name}</span>
+                                        <a 
+                                          href={resource.link} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                                        >
+                                          {resource.name}
+                                        </a>
                                         <span className="text-gray-500">{resource.type}</span>
                                       </div>
                                       <div className="text-sm text-gray-500 mt-1">
