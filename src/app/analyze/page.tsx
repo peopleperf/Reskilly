@@ -45,7 +45,7 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mt-12">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -63,7 +63,7 @@ export default function AnalyzePage() {
                   </div>
                 </div>
                 <img
-                  src="/analyze-bg.jpg"
+                  src="/images/analyze-background.jpg"
                   alt="AI Analysis"
                   className="w-full h-full object-cover opacity-20"
                 />
