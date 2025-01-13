@@ -1,6 +1,5 @@
 'use client'
 
-import { m } from 'framer-motion'
 import { Brain, BarChart2, Lightbulb, Target, Shield, ListChecks } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -12,7 +11,7 @@ interface AnalyzingProcessProps {
     responsibilities?: string;
     skills?: string;
   };
-  onComplete?: () => void;
+  onComplete?: (data: any) => void;
 }
 
 const steps = [
@@ -58,130 +57,141 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [completed, setCompleted] = useState(false)
+
+  const analyzeJob = async () => {
+    try {
+      // Start with the first step immediately
+      setCurrentStep(0);
+      
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jobData),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze job');
+      }
+
+      // Only store data after successful API call
+      localStorage.setItem('JOB_DATA', JSON.stringify(jobData));
+      localStorage.setItem('ANALYSIS_RESULTS', JSON.stringify(data));
+
+      // Simulate steps with shorter delays
+      for (let i = 1; i < steps.length; i++) {
+        setCurrentStep(i);
+        // Reduced delay between steps
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      setCompleted(true);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (onComplete) {
+        onComplete(data);
+      }
+      router.push("/results");
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      setError(error.message || 'Failed to analyze job. Please try again.');
+      // Don't redirect immediately, give user time to read the error
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      router.push('/analyze');
+    }
+  };
 
   useEffect(() => {
-    const analyzeJob = async () => {
-      try {
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(jobData),
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to analyze job')
-        }
-
-        const result = await response.json()
-
-        if (result.error) {
-          throw new Error(result.error)
-        }
-
-        // Simulate steps with delays
-        for (let i = 0; i < steps.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1500))
-          setCurrentStep(i + 1)
-        }
-
-        // Store results
-        localStorage.setItem('JOB_DATA', JSON.stringify(jobData))
-        localStorage.setItem('ANALYSIS_RESULTS', JSON.stringify(result))
-        
-        // Navigate to results
-        router.push("/results")
-        onComplete?.()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to analyze job')
-        setTimeout(() => router.push("/analyze"), 3000) // Redirect back after error
-      }
+    if (jobData) {
+      analyzeJob();
     }
-
-    analyzeJob()
   }, [jobData, router, onComplete])
 
   return (
-    <div className="fixed inset-0 bg-gray-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-white flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         {error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <m.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <p className="text-red-600">{error}</p>
-            </m.div>
+          <div className="text-center animate-fade-in">
+            <svg className="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Analysis Failed</h3>
+            <p className="text-gray-600">{error}</p>
+            <p className="text-gray-400">Redirecting back to form...</p>
           </div>
         ) : (
-          <div className="text-center">
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <h1 className="text-3xl font-bold mb-8">
-                Analyzing {jobData.jobTitle} in {jobData.industry}
-              </h1>
-            </m.div>
+          <div className="text-center animate-fade-in">
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <div className="absolute inset-0 border-4 border-blue-200 rounded-full animate-pulse"></div>
+              <div
+                className="absolute inset-0 border-4 border-blue-500 rounded-full animate-spin"
+                style={{
+                  borderRightColor: 'transparent',
+                  borderBottomColor: 'transparent',
+                }}
+              ></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Analyzing Your Role</h3>
+            <p className="text-gray-600">{jobData.jobTitle} in {jobData.industry}</p>
+            <p className="text-lg text-gray-600 mb-8">
+              Step {currentStep + 1} of {steps.length}: <span className="text-blue-500 font-medium">{steps[currentStep]?.title}</span>
+            </p>
           </div>
         )}
 
-        <div className="text-center mb-12">
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <p className="text-gray-600">
-              Please wait while we analyze the AI impact on your role...
-            </p>
-          </m.div>
-        </div>
+        <div className="bg-white/50 backdrop-blur-sm rounded-xl shadow-2xl p-8 border border-gray-200 animate-fade-in">
+          <div className="mb-8">
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-blue-400 h-3 rounded-full transition-all duration-500 ease-in-out"
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon
-            const isActive = index === currentStep
-            const isComplete = index < currentStep
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {steps.map((step, index) => {
+              const Icon = step.icon
+              const isActive = index === currentStep
+              const isComplete = index < currentStep
 
-            return (
-              <div key={step.title} className="relative bg-white rounded-lg p-6 shadow-sm">
-                <m.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+              return (
+                <div
+                  key={step.title}
+                  className={`relative rounded-lg p-6 transition-all duration-300 animate-fade-in ${
+                    isActive ? 'bg-blue-500/10 border-2 border-blue-500' : 
+                    isComplete ? 'bg-green-500/10 border-2 border-green-500' : 'bg-white/50 border-2 border-gray-200'
+                  }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center mb-4`}>
+                  <div className={`w-12 h-12 rounded-full ${
+                    isComplete ? 'bg-green-500' : 
+                    isActive ? 'bg-blue-500' : 'bg-gray-200'
+                  } flex items-center justify-center mb-4`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className={`text-lg font-semibold mb-2 ${
+                    isActive ? 'text-blue-400' : 
+                    isComplete ? 'text-green-400' : 'text-gray-600'
+                  }`}>
                     {step.title}
                   </h3>
                   <p className="text-gray-600">{step.description}</p>
-                </m.div>
-                {(isActive || isComplete) && (
-                  <div className="absolute inset-0 rounded-lg">
-                    <m.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        borderRadius: '0.5rem'
-                      }}
-                    />
-                  </div>
-                )}
-                {isActive && (
-                  <div className="absolute inset-0 ring-2 ring-blue-500 rounded-lg pointer-events-none" />
-                )}
-              </div>
-            )
-          })}
+                  {isComplete && (
+                    <div className="absolute top-4 right-4 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-scale-in">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
