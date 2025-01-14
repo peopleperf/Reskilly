@@ -70,7 +70,14 @@ export async function POST(request: Request) {
           5. Provide specific, actionable recommendations rather than general advice
           6. Learning resources must include actual course names, platforms, and real links
           
-          IMPORTANT: Return your response as a plain JSON object WITHOUT any markdown formatting or code blocks.
+          CRITICAL JSON FORMATTING RULES:
+          1. Return ONLY a valid JSON object - no markdown, no code blocks, no extra text
+          2. Do not use trailing commas
+          3. Always close all arrays and objects properly
+          4. Use double quotes for all strings
+          5. Keep string values concise to avoid truncation
+          6. Ensure all arrays have at least one element
+          7. All required fields must be present and non-null
           
           Required response format:
           {
@@ -210,19 +217,7 @@ export async function POST(request: Request) {
       }
 
       // Validate the response structure
-      if (!parsedResponse.jobTitle ||
-          !parsedResponse.overview?.impactScore || 
-          !Array.isArray(parsedResponse.responsibilities?.current) ||
-          !Array.isArray(parsedResponse.responsibilities?.emerging) ||
-          !Array.isArray(parsedResponse.skills?.current) ||
-          !Array.isArray(parsedResponse.skills?.recommended) ||
-          !Array.isArray(parsedResponse.opportunities) ||
-          !Array.isArray(parsedResponse.threats) ||
-          !parsedResponse.recommendations?.immediate ||
-          !parsedResponse.recommendations?.shortTerm ||
-          !parsedResponse.recommendations?.longTerm) {
-        throw new Error('Invalid response structure')
-      }
+      validateResponseStructure(parsedResponse);
 
       return NextResponse.json(parsedResponse);
     } catch (error) {
@@ -256,10 +251,131 @@ function isValidJSON(str: string) {
 }
 
 function cleanJSON(str: string) {
-  // Remove any trailing incomplete objects
-  const lastBrace = str.lastIndexOf('}');
-  if (lastBrace !== -1) {
-    return str.substring(0, lastBrace + 1);
+  // First attempt: Try to parse as is
+  try {
+    JSON.parse(str);
+    return str;
+  } catch (e) {
+    console.log('Initial JSON parse failed, attempting to clean...');
   }
-  return str;
+
+  // Remove any trailing commas followed by closing braces/brackets
+  str = str.replace(/,(\s*[}\]])/g, '$1');
+  
+  // Remove any duplicate commas
+  str = str.replace(/,\s*,/g, ',');
+  
+  // Remove trailing commas in arrays
+  str = str.replace(/,(\s*])/g, '$1');
+  
+  // Fix common formatting issues
+  str = str.replace(/}\s*{/g, '},{');
+  str = str.replace(/]\s*{/g, '],{');
+  str = str.replace(/}\s*]/g, '}]');
+  
+  // Attempt to find and fix truncated JSON
+  try {
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let lastValidIndex = -1;
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      
+      if (char === '\\' && !escape) {
+        escape = true;
+        continue;
+      }
+      
+      if (char === '"' && !escape) {
+        inString = !inString;
+        continue;
+      }
+      
+      if (!inString) {
+        if (char === '{' || char === '[') {
+          depth++;
+        } else if (char === '}' || char === ']') {
+          depth--;
+          if (depth === 0) {
+            lastValidIndex = i;
+          }
+        }
+      }
+    }
+    
+    // If we have unmatched braces/brackets, truncate to last valid position
+    if (depth !== 0 && lastValidIndex !== -1) {
+      str = str.substring(0, lastValidIndex + 1);
+    }
+  } catch (e) {
+    console.error('Error during JSON cleaning:', e);
+  }
+
+  // Final validation
+  try {
+    JSON.parse(str);
+    return str;
+  } catch (e) {
+    console.error('Failed to clean JSON:', e);
+    throw new Error('Unable to clean malformed JSON response');
+  }
+}
+
+function validateResponseStructure(response: any) {
+  const requiredFields = {
+    overview: ['impactScore', 'summary', 'timeframe'],
+    responsibilities: {
+      current: ['task', 'automationRisk', 'reasoning', 'timeline', 'humanValue'],
+      emerging: ['task', 'importance', 'timeline']
+    },
+    skills: {
+      current: ['skill', 'currentRelevance', 'futureRelevance', 'automationRisk', 'reasoning'],
+      recommended: ['skill', 'importance', 'timeline', 'resources']
+    },
+    opportunities: ['title', 'description', 'actionItems', 'timeline', 'potentialOutcome'],
+    threats: ['title', 'description', 'riskLevel', 'mitigationSteps', 'timeline'],
+    recommendations: ['immediate', 'shortTerm', 'longTerm']
+  };
+
+  // Validate overview
+  if (!response.overview || typeof response.overview !== 'object') {
+    throw new Error('Missing or invalid overview section');
+  }
+
+  for (const field of requiredFields.overview) {
+    if (!response.overview[field]) {
+      throw new Error(`Missing required field: overview.${field}`);
+    }
+  }
+
+  // Validate responsibilities
+  if (!response.responsibilities?.current?.length || !response.responsibilities?.emerging?.length) {
+    throw new Error('Missing or empty responsibilities sections');
+  }
+
+  // Validate skills
+  if (!response.skills?.current?.length || !response.skills?.recommended?.length) {
+    throw new Error('Missing or empty skills sections');
+  }
+
+  // Validate opportunities and threats
+  if (!Array.isArray(response.opportunities) || !Array.isArray(response.threats)) {
+    throw new Error('Opportunities and threats must be arrays');
+  }
+
+  // Validate recommendations
+  if (!response.recommendations?.immediate?.length || 
+      !response.recommendations?.shortTerm?.length || 
+      !response.recommendations?.longTerm?.length) {
+    throw new Error('Missing or empty recommendations sections');
+  }
+
+  return true;
 }
