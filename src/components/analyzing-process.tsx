@@ -61,8 +61,7 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
 
   const analyzeJob = async () => {
     try {
-      // Start with the first step immediately
-      setCurrentStep(0);
+      console.log('Making API request for job:', jobData.jobTitle);
       
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -72,44 +71,71 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
         body: JSON.stringify(jobData),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze job');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Only store data after successful API call
-      localStorage.setItem('JOB_DATA', JSON.stringify(jobData));
-      localStorage.setItem('ANALYSIS_RESULTS', JSON.stringify(data));
-
-      // Simulate steps with shorter delays
-      for (let i = 1; i < steps.length; i++) {
-        setCurrentStep(i);
-        // Reduced delay between steps
-        await new Promise(resolve => setTimeout(resolve, 300));
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("API response was not JSON");
       }
 
-      setCompleted(true);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      let data;
+      try {
+        const text = await response.text();
+        console.log('Raw API response:', text);
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Error parsing API response:', parseError);
+        throw new Error('Failed to parse API response');
+      }
+
+      // Store the results in localStorage
+      localStorage.setItem('analysisResults', JSON.stringify(data));
       
+      // Mark as completed after successful storage
+      setCompleted(true);
+      
+      // Only call onComplete if it exists
       if (onComplete) {
         onComplete(data);
       }
-      router.push("/results");
-    } catch (error: any) {
-      console.error('Analysis error:', error);
-      setError(error.message || 'Failed to analyze job. Please try again.');
-      // Don't redirect immediately, give user time to read the error
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      router.push('/analyze');
+
+      // Navigate after a short delay to show completion state
+      setTimeout(() => {
+        router.push('/results');
+      }, 1000);
+
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.');
+      
+      // Wait 3 seconds before redirecting on error
+      setTimeout(() => {
+        router.push('/analyze');
+      }, 3000);
     }
   };
 
   useEffect(() => {
     if (jobData) {
+      // Start the analysis process
       analyzeJob();
+      
+      // Start step simulation
+      let currentStepIndex = 0;
+      const stepInterval = setInterval(() => {
+        if (currentStepIndex < steps.length - 1 && !completed && !error) {
+          currentStepIndex++;
+          setCurrentStep(currentStepIndex);
+        } else {
+          clearInterval(stepInterval);
+        }
+      }, 1000);
+
+      return () => clearInterval(stepInterval);
     }
-  }, [jobData, router, onComplete])
+  }, [jobData]);
 
   const onRetry = () => {
     setError(null);
