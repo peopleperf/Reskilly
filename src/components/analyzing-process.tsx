@@ -90,35 +90,42 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
         throw new Error('Failed to parse API response');
       }
 
-      // Store the results in localStorage
+      // Store both job data and analysis results
+      localStorage.setItem('jobData', JSON.stringify(jobData));
       localStorage.setItem('analysisResults', JSON.stringify(data));
       
-      // Mark as completed after successful storage
+      // Mark as completed
       setCompleted(true);
       
-      // Only call onComplete if it exists
+      // Call onComplete callback if provided
       if (onComplete) {
         onComplete(data);
       }
 
-      // Navigate after a short delay to show completion state
-      setTimeout(() => {
-        router.push('/results');
-      }, 1000);
+      // Show completion state briefly before redirecting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Ensure we're redirecting to results page
+      console.log('Redirecting to results page...');
+      router.push('/results');
 
     } catch (error) {
       console.error('Analysis failed:', error);
       setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.');
       
-      // Wait 3 seconds before redirecting on error
-      setTimeout(() => {
-        router.push('/analyze');
-      }, 3000);
+      // Show error state briefly before redirecting
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      router.push('/analyze');
     }
   };
 
   useEffect(() => {
     if (jobData) {
+      // Reset states
+      setError(null);
+      setCompleted(false);
+      setCurrentStep(0);
+
       // Start the analysis process
       analyzeJob();
       
@@ -140,7 +147,7 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
   const onRetry = () => {
     setError(null);
     analyzeJob();
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col pt-16 sm:pt-20">
