@@ -1,8 +1,10 @@
 'use client'
 
-import { Brain, BarChart2, Lightbulb, Target, Shield, ListChecks, CheckCircle, XCircle, CheckIcon } from 'lucide-react'
+import { Brain, BarChart2, Lightbulb, Target, Shield, ListChecks, CheckCircle, XCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { storeApiResponse, updateValidationStatus, storeJobAnalysis } from '@/lib/supabase'
 
 interface AnalyzingProcessProps {
   jobData: {
@@ -71,101 +73,75 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
         body: JSON.stringify(jobData),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("API response was not JSON");
-      }
-
       let data;
+      const text = await response.text();
+      console.log('Raw API response:', text);
+      
       try {
-        const text = await response.text();
-        console.log('Raw API response:', text);
         data = JSON.parse(text);
       } catch (parseError) {
         console.error('Error parsing API response:', parseError);
-        throw new Error('Failed to parse API response');
+        throw new Error('The API returned an invalid response. Please try again.');
       }
 
-      // Store both job data and analysis results
-      localStorage.setItem('jobData', JSON.stringify(jobData));
-      localStorage.setItem('analysisResults', JSON.stringify(data));
+      if (!response.ok || data.error) {
+        const errorMessage = data.error || data.details || `Request failed with status ${response.status}`;
+        console.error('API error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Store the validated response in Supabase
+      const storedAnalysis = await storeJobAnalysis(jobData, data);
+      console.log('Analysis stored successfully:', storedAnalysis.id);
       
-      // Mark as completed
       setCompleted(true);
       
-      // Call onComplete callback if provided
       if (onComplete) {
         onComplete(data);
       }
 
-      // Show completion state briefly before redirecting
+      // Wait a moment to ensure data is stored before redirecting
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Ensure we're redirecting to results page
-      console.log('Redirecting to results page...');
-      router.push('/results');
-
-    } catch (error) {
+      router.push(`/results?id=${storedAnalysis.id}`);
+    } catch (error: any) {
       console.error('Analysis failed:', error);
-      setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.');
-      
-      // Show error state briefly before redirecting
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      router.push('/analyze');
+      setError(error.message || 'An unexpected error occurred. Please try again.');
+      setCompleted(false);
     }
   };
 
   useEffect(() => {
-    if (jobData) {
-      // Reset states
-      setError(null);
-      setCompleted(false);
-      setCurrentStep(0);
-
-      // Start the analysis process
-      analyzeJob();
-      
-      // Start step simulation
-      let currentStepIndex = 0;
-      const stepInterval = setInterval(() => {
-        if (currentStepIndex < steps.length - 1 && !completed && !error) {
-          currentStepIndex++;
-          setCurrentStep(currentStepIndex);
-        } else {
-          clearInterval(stepInterval);
-        }
-      }, 1000);
-
-      return () => clearInterval(stepInterval);
-    }
-  }, [jobData]);
-
-  const onRetry = () => {
-    setError(null);
     analyzeJob();
-  };
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md w-full space-y-4 text-center">
+          <XCircle className="mx-auto h-12 w-12 text-red-500" />
+          <h2 className="text-2xl font-bold text-gray-900">Analysis Failed</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setCurrentStep(0);
+              setCompleted(false);
+              analyzeJob();
+            }}
+            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col pt-16 sm:pt-20">
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="w-full max-w-2xl mx-auto">
-          {error ? (
-            <div className="text-center animate-fade-in py-8">
-              <XCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-red-500" />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Analysis Failed</h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-4">{error}</p>
-              <button
-                onClick={onRetry}
-                className="mt-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm sm:text-base"
-              >
-                Try Again
-              </button>
-            </div>
-          ) : completed ? (
+          {completed ? (
             <div className="text-center animate-fade-in py-8">
               <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-green-500" />
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Analysis Complete!</h3>
@@ -220,26 +196,13 @@ export function AnalyzingProcess({ jobData, onComplete }: AnalyzingProcessProps)
                         </div>
                         {isComplete && (
                           <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full flex items-center justify-center animate-scale-in">
-                            <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                           </div>
                         )}
                       </div>
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Progress Bar */}
-              <div className="sticky bottom-0 bg-white py-4 border-t border-gray-100">
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-500 mt-2">
-                  Step {currentStep + 1} of {steps.length}
-                </p>
               </div>
             </div>
           )}

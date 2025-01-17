@@ -1,5 +1,8 @@
 import OpenAI from "openai"
 import { NextResponse } from "next/server"
+import { jobAnalysisSchema } from '@/lib/validation-schemas'
+import { storeApiResponse, updateValidationStatus } from '@/lib/supabase'
+import { ZodError } from 'zod'
 
 export const maxDuration = 300 // Set max duration to 300 seconds (5 minutes)
 
@@ -16,6 +19,7 @@ export async function POST(request: Request) {
     const openai = new OpenAI({
       baseURL: 'https://api.deepseek.com/v1',
       apiKey: process.env.DEEPSEEK_API_KEY,
+      dangerouslyAllowBrowser: true,
       timeout: 180000, // 3 minutes timeout
     })
 
@@ -45,20 +49,19 @@ export async function POST(request: Request) {
     prompt += `\n\nProvide a comprehensive analysis including:
     1. Overview with impact score (0-100) and timeline
     2. Current responsibilities and their automation risk
-    3. Emerging responsibilities
+    3. Emerging responsibilities with reasoning
     4. Current skills assessment
-    5. Recommended skills
+    5. Recommended skills with resources
     6. Opportunities
-    7. Threats
-    8. Immediate, short-term, and long-term recommendations`
+    7. Threats with risk levels`
 
     const completion = await openai.chat.completions.create({
       model: "deepseek-chat",
       messages: [
         {
           role: "system",
-          content: `You are an AI job impact analyst. Your task is to provide a realistic and practical analysis of how AI will impact the given job role. 
-          
+          content: `You are an AI job impact analyst. Your task is to provide a realistic and practical analysis of how AI will impact the given job role.
+
           IMPORTANT GUIDELINES:
           1. Be realistic and specific about AI capabilities - avoid general statements about AI not being able to replace "human creativity" or "problem-solving"
           2. Focus on concrete tasks that AI can and cannot do, with specific examples
@@ -68,16 +71,7 @@ export async function POST(request: Request) {
              - Scores 50-70: Jobs partially automatable but requiring human oversight
              - Scores 10-40: Jobs where AI primarily augments rather than replaces
           5. Provide specific, actionable recommendations rather than general advice
-          6. Learning resources must include actual course names, platforms, and real links
-          
-          CRITICAL JSON FORMATTING RULES:
-          1. Return ONLY a valid JSON object - no markdown, no code blocks, no extra text
-          2. Do not use trailing commas
-          3. Always close all arrays and objects properly
-          4. Use double quotes for all strings
-          5. Keep string values concise to avoid truncation
-          6. Ensure all arrays have at least one element
-          7. All required fields must be present and non-null
+          6. Learning resources must include actual course names and links
           
           Required response format:
           {
@@ -99,8 +93,9 @@ export async function POST(request: Request) {
               "emerging": [
                 {
                   "task": "<specific new task>",
-                  "importance": "<clear importance level with reasoning>",
-                  "timeline": "<specific timeline>"
+                  "importance": <number 0-100>,
+                  "timeline": "<specific timeline>",
+                  "reasoning": "<optional reasoning for importance>"
                 }
               ]
             },
@@ -117,17 +112,9 @@ export async function POST(request: Request) {
               "recommended": [
                 {
                   "skill": "<specific skill>",
-                  "importance": "<clear importance level>",
+                  "importance": <number 0-100>,
                   "timeline": "<specific timeline>",
-                  "resources": [
-                    {
-                      "name": "<actual course/resource name>",
-                      "type": "<specific type>",
-                      "link": "<actual URL>",
-                      "duration": "<specific duration>",
-                      "cost": "<actual cost>"
-                    }
-                  ]
+                  "resources": ["<specific resource with link>"]
                 }
               ]
             },
@@ -144,37 +131,11 @@ export async function POST(request: Request) {
               {
                 "title": "<specific threat>",
                 "description": "<detailed description with examples>",
-                "riskLevel": "<high/medium/low with clear reasoning>",
+                "riskLevel": <number 0-100>,
                 "mitigationSteps": ["<specific step 1>", "<specific step 2>"],
                 "timeline": "<specific timeline>"
               }
-            ],
-            "recommendations": {
-              "immediate": [
-                {
-                  "action": "<specific action>",
-                  "reasoning": "<concrete reasoning>",
-                  "resources": ["<specific resource 1>", "<specific resource 2>"],
-                  "expectedOutcome": "<specific outcome>"
-                }
-              ],
-              "shortTerm": [
-                {
-                  "action": "<specific action>",
-                  "reasoning": "<concrete reasoning>",
-                  "resources": ["<specific resource 1>", "<specific resource 2>"],
-                  "expectedOutcome": "<specific outcome>"
-                }
-              ],
-              "longTerm": [
-                {
-                  "action": "<specific action>",
-                  "reasoning": "<concrete reasoning>",
-                  "resources": ["<specific resource 1>", "<specific resource 2>"],
-                  "expectedOutcome": "<specific outcome>"
-                }
-              ]
-            }
+            ]
           }`
         },
         {
@@ -186,196 +147,56 @@ export async function POST(request: Request) {
       max_tokens: 2000
     })
 
-    try {
-      // Parse and validate the response
-      const rawResponse = completion.choices[0]?.message?.content;
-      if (!rawResponse) {
-        throw new Error('Empty response from API');
-      }
-      
-      console.log('Raw API response:', rawResponse);
-      
-      let cleanedResponse = rawResponse;
-      // If the response is truncated, try to fix the JSON
-      if (!isValidJSON(cleanedResponse)) {
-        console.log('Invalid JSON detected, attempting to clean...');
-        cleanedResponse = cleanJSON(cleanedResponse);
-      }
-      
-      console.log('Cleaned Response:', cleanedResponse);
-      const parsedResponse = JSON.parse(cleanedResponse);
-      
-      // Add job title to the response
-      parsedResponse.jobTitle = data.jobTitle;
-
-      // Initialize arrays if they don't exist
-      if (!parsedResponse.opportunities) {
-        parsedResponse.opportunities = []
-      }
-      if (!parsedResponse.threats) {
-        parsedResponse.threats = []
-      }
-
-      // Validate the response structure
-      validateResponseStructure(parsedResponse);
-
-      return NextResponse.json(parsedResponse);
-    } catch (error) {
-      console.error('Error processing API response:', error);
-      return NextResponse.json(
-        { error: 'Failed to process AI response. Please try again.' },
-        { status: 500 }
-      );
+    const rawResponse = completion.choices[0].message.content;
+    if (!rawResponse) {
+      throw new Error('Empty response from API');
     }
 
+    // Store raw response first
+    const responseId = await storeApiResponse(rawResponse);
+
+    try {
+      // Parse and validate the response
+      const parsedResponse = JSON.parse(rawResponse);
+      
+      // Validate against schema
+      const validatedResponse = jobAnalysisSchema.parse(parsedResponse);
+      
+      // Update validation status
+      await updateValidationStatus(responseId, validatedResponse);
+      
+      return NextResponse.json(validatedResponse);
+    } catch (error) {
+      console.error('Error processing API response:', error);
+      
+      if (error instanceof ZodError) {
+        console.error('Validation errors:', error.errors);
+        await updateValidationStatus(
+          responseId,
+          null,
+          error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        );
+        return NextResponse.json(
+          { error: 'Invalid response format', details: error.errors },
+          { status: 500 }
+        );
+      }
+      
+      if (error instanceof SyntaxError) {
+        console.error('JSON parsing error:', error);
+        return NextResponse.json(
+          { error: 'Invalid JSON response from API' },
+          { status: 500 }
+        );
+      }
+      
+      throw error;
+    }
   } catch (error: any) {
-    console.error('General Error:', error);
+    console.error('Error in analyze route:', error);
     return NextResponse.json(
-      { 
-        error: error.message || 'Analysis failed',
-        details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
-      },
+      { error: error.message || 'An unexpected error occurred' },
       { status: 500 }
     )
   }
-}
-
-// Helper functions
-function isValidJSON(str: string) {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-function cleanJSON(str: string) {
-  // First attempt: Try to parse as is
-  try {
-    JSON.parse(str);
-    return str;
-  } catch (e) {
-    console.log('Initial JSON parse failed, attempting to clean...');
-  }
-
-  // Remove any trailing commas followed by closing braces/brackets
-  str = str.replace(/,(\s*[}\]])/g, '$1');
-  
-  // Remove any duplicate commas
-  str = str.replace(/,\s*,/g, ',');
-  
-  // Remove trailing commas in arrays
-  str = str.replace(/,(\s*])/g, '$1');
-  
-  // Fix common formatting issues
-  str = str.replace(/}\s*{/g, '},{');
-  str = str.replace(/]\s*{/g, '],{');
-  str = str.replace(/}\s*]/g, '}]');
-  
-  // Attempt to find and fix truncated JSON
-  try {
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-    let lastValidIndex = -1;
-    
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      
-      if (escape) {
-        escape = false;
-        continue;
-      }
-      
-      if (char === '\\' && !escape) {
-        escape = true;
-        continue;
-      }
-      
-      if (char === '"' && !escape) {
-        inString = !inString;
-        continue;
-      }
-      
-      if (!inString) {
-        if (char === '{' || char === '[') {
-          depth++;
-        } else if (char === '}' || char === ']') {
-          depth--;
-          if (depth === 0) {
-            lastValidIndex = i;
-          }
-        }
-      }
-    }
-    
-    // If we have unmatched braces/brackets, truncate to last valid position
-    if (depth !== 0 && lastValidIndex !== -1) {
-      str = str.substring(0, lastValidIndex + 1);
-    }
-  } catch (e) {
-    console.error('Error during JSON cleaning:', e);
-  }
-
-  // Final validation
-  try {
-    JSON.parse(str);
-    return str;
-  } catch (e) {
-    console.error('Failed to clean JSON:', e);
-    throw new Error('Unable to clean malformed JSON response');
-  }
-}
-
-function validateResponseStructure(response: any) {
-  const requiredFields = {
-    overview: ['impactScore', 'summary', 'timeframe'],
-    responsibilities: {
-      current: ['task', 'automationRisk', 'reasoning', 'timeline', 'humanValue'],
-      emerging: ['task', 'importance', 'timeline']
-    },
-    skills: {
-      current: ['skill', 'currentRelevance', 'futureRelevance', 'automationRisk', 'reasoning'],
-      recommended: ['skill', 'importance', 'timeline', 'resources']
-    },
-    opportunities: ['title', 'description', 'actionItems', 'timeline', 'potentialOutcome'],
-    threats: ['title', 'description', 'riskLevel', 'mitigationSteps', 'timeline'],
-    recommendations: ['immediate', 'shortTerm', 'longTerm']
-  };
-
-  // Validate overview
-  if (!response.overview || typeof response.overview !== 'object') {
-    throw new Error('Missing or invalid overview section');
-  }
-
-  for (const field of requiredFields.overview) {
-    if (!response.overview[field]) {
-      throw new Error(`Missing required field: overview.${field}`);
-    }
-  }
-
-  // Validate responsibilities
-  if (!response.responsibilities?.current?.length || !response.responsibilities?.emerging?.length) {
-    throw new Error('Missing or empty responsibilities sections');
-  }
-
-  // Validate skills
-  if (!response.skills?.current?.length || !response.skills?.recommended?.length) {
-    throw new Error('Missing or empty skills sections');
-  }
-
-  // Validate opportunities and threats
-  if (!Array.isArray(response.opportunities) || !Array.isArray(response.threats)) {
-    throw new Error('Opportunities and threats must be arrays');
-  }
-
-  // Validate recommendations
-  if (!response.recommendations?.immediate?.length || 
-      !response.recommendations?.shortTerm?.length || 
-      !response.recommendations?.longTerm?.length) {
-    throw new Error('Missing or empty recommendations sections');
-  }
-
-  return true;
 }

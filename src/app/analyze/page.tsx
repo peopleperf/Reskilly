@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from "react"
 import Select from 'react-select'
@@ -85,6 +85,8 @@ export default function AnalyzePage() {
                         Job Title *
                       </label>
                       <Select
+                        key="job-select"
+                        instanceId="job-select"
                         options={jobTitles}
                         value={selectedJob}
                         onChange={setSelectedJob}
@@ -108,11 +110,13 @@ export default function AnalyzePage() {
                         Industry *
                       </label>
                       <Select
+                        key="industry-select"
+                        instanceId="industry-select"
                         options={industries}
                         value={selectedIndustry}
                         onChange={setSelectedIndustry}
                         className="mb-2"
-                        placeholder="Select or type your industry..."
+                        placeholder="Select your industry..."
                         isSearchable
                       />
                       {selectedIndustry?.value === 'other' && (
@@ -159,15 +163,19 @@ export default function AnalyzePage() {
                     </div>
 
                     {error && (
-                      <div className="text-red-600 text-sm font-medium">{error}</div>
+                      <div className="text-red-500 text-sm mt-2">
+                        {error}
+                      </div>
                     )}
-
-                    <button
-                      type="submit"
-                      className="w-full py-3 px-4 rounded-md text-white font-medium bg-blue-900 hover:bg-blue-800 transition-colors"
-                    >
-                      Analyze AI Impact
-                    </button>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                        disabled={isAnalyzing}
+                      >
+                        {isAnalyzing ? 'Analyzing...' : 'Analyze Impact'}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
