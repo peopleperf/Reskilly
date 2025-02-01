@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function Home() {
   return (
@@ -9,13 +10,13 @@ export default function Home() {
         className="absolute inset-0 z-0"
         style={{
           backgroundImage:
-            'url("https://sjc.microlink.io/8a4lRlo__eQhBtQZmIo8Zge3cA4epM94pGW36ESEqi7yK8oH38cdadM1SwLZ0ME3MOrf2FaCjtxFpdqYu8r1zg.jpeg")',
+            'url("https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070&auto=format&fit=crop")',
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="absolute inset-0 bg-black/50" /> {/* Overlay */}
+        <div className="absolute inset-0 bg-black/75" /> {/* Darker overlay for better text visibility */}
       </div>
 
       {/* Content */}
